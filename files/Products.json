@@ -1,0 +1,24 @@
+[
+  {
+    "id": 1,
+    "title": "Alfajias Saligna 2 x 2 x 4 mts ",
+    "description": "Madera en saligna de 5 cm x 5 cm x 4 metros",
+    "code": "ABC123",
+    "price": 560,
+    "status": true,
+    "stock": 2500,
+    "category": "Saligna",
+    "thumbnails": []
+  },
+  {
+    "id": 2,
+    "title": "Alfajias Saligna 2 x 2 x 3.66 mts ",
+    "description": "Madera en saligna de 5 cm x 5 cm x 3.66 metros",
+    "code": "ABC1234ssdasda",
+    "price": 520,
+    "status": true,
+    "stock": 2500,
+    "category": "Saligna",
+    "thumbnails": []
+  }
+]
