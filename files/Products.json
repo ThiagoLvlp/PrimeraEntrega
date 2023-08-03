@@ -20,5 +20,13 @@
     "stock": 2500,
     "category": "Saligna",
     "thumbnails": []
+  },
+  {
+    "title": "Tapajuntas 1/2 x 3 x 4 mts",
+    "description": "Madera en saligna 1.25 cm x  7.5 cm x 4 mts",
+    "code": "Tj1/2",
+    "price": "217",
+    "category": "Saligna",
+    "id": 3
   }
 ]

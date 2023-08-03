@@ -1,6 +1,57 @@
-<div>  
-    
-</div>
+<!DOCTYPE html>
+<html>
+<head>
+<title>Lista de Productos en tiempo real</title>
+</head>
+<body>
+<h1>Lista de Productos en tiempo real</h1>
+<ul id="productos-lista">
+    {{#each productos}}
+    <li>
+        <strong>{{title}}</strong><br>
+        Descripción: {{description}}<br>
+        Código: {{code}}<br>
+        Precio: {{price}}<br>
+        Categoría: {{category}}<br>
+        Stock: {{stock}}<br>
+    </li>
+    {{/each}}
+</ul>
+
+<form action="/addproduct" method="post">
+    <label for="title">Título:</label>
+    <input type="text" id="title" name="title" required><br>
+    <label for="description">Descripción:</label>
+    <input type="text" id="description" name="description" required><br>
+    <label for="code">Código:</label>
+    <input type="text" id="code" name="code" required><br>
+    <label for="price">Precio:</label>
+    <input type="number" id="price" name="price" required><br>
+    <label for="category">Categoría:</label>
+    <input type="text" id="category" name="category" required><br>
+    <label for="category">Stock:</label>
+    <input type="number" id="category" name="category" required><br>
+    <button type="submit">Crear Producto</button>
+</form>
+
+<script>
+var socket = io();
+socket.on('productos', function(productos) {
+    var productosLista = document.getElementById('productos-lista');
+    productosLista.innerHTML = '';
+    productos.forEach(function(producto) {
+    var li = document.createElement('li');
+    li.innerHTML = '<strong>' + producto.title + '</strong><br>' +
+        'Descripción: ' + producto.description + '<br>' +
+        'Código: ' + producto.code + '<br>' +
+        'Precio: ' + producto.price + '<br>' +
+        'Categoría: ' + producto.category + '<br>';
+    productosLista.appendChild(li);
+});
+});
+</script>
+</body>
+</html>
 
 <script src="/socket.io/socket.io.js"></script>
 <script src="/js/index.js"></script>

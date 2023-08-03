@@ -1,15 +1,22 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Lista de Productos</title>
+<title>Lista de Productos</title>
 </head>
 <body>
-    <h1>Lista de Productos</h1>
-    <ul>
-    {{#each productos}}
-    <li>{{nombre}} - Precio: {{precio}}</li>
+<h1>Lista de Productos</h1>
+<ul>
+    {{#each Productos}} 
+    <li>
+        <strong>{{title}}</strong><br>
+        Descripción: {{description}}<br>
+        Código: {{code}}<br>
+        Precio: {{price}}<br>
+        Categoría: {{category}}<br>
+        Stock: {{stock}}<br>
+    </li>
     {{/each}}
-    </ul>
+</ul>
 </body>
 </html>
 
