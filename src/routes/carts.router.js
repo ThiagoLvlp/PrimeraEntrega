@@ -1,73 +1,133 @@
-import { Router } from "express";
-import fs from "fs";
-const rutaArchivo = "../files/Cart.json";
+import express from 'express';
+import Cart from '../models/cartsmodel.js';
+import Product from '../models/productsmodel.js';
 
-const router = Router();
+const router = express.Router();
 
-// Leer Archivo JSON del carrito //////
-const leerArchivoJSON = (ruta) => {
+//Crear un nuevo carrito
+router.post('/', async (req, res) => {
     try {
-    const data = fs.readFileSync(ruta, "utf8");
-    return JSON.parse(data);
-} catch (error) {
-    console.error("Error al leer el archivo JSON:", error);
-    return [];
-}
-};
-const saveCartToFile = (cart) => {
-    fs.writeFileSync(rutaArchivo, JSON.stringify(cart, null, 2), "utf8");
-};
-
-//////-------- Crear Neuvo Cart ------//////// 
-router.post("/", (req, res) => {
-    const newCart = {
-    id: generateNewCartId(),
-    products: [],
-};
-    const carts = leerArchivoJSON(rutaArchivo);
-    carts.push(newCart);
-    saveCartToFile(carts);
-    res.status(201).json(newCart);
+        const { products } = req.body;
+        const newCart = new Cart({ products });
+        const savedCart = await newCart.save();
+        res.status(201).json(savedCart);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Error creating cart' });
+    }
 });
 
-///------- Buscar Cart Por Id -----//////// 
-router.get("/:cid", (req, res) => {
-    const cartId = Number(req.params.cid);
-    const carts = leerArchivoJSON(rutaArchivo);
-    const cart = carts.find((cart) => cart.id === cartId);
-    if (!cart) {
-        return res.status(404).json({ message: "Cart not found" });
-}
-    res.send(cart.products);
+//Obtener productos de un carrito por su ID
+router.get('/:cid', async (req, res) => {
+    try {
+        const cart = await Cart.findById(req.params.cid).populate('products.product');
+        if (!cart) {
+            return res.status(404).json({ message: 'Cart not found' });
+        }
+        res.json(cart.products);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Error retrieving cart products' });
+    }
+});
+
+// Agregar producto a un carrito
+router.post('/:cid/product/:pid', async (req, res) => {
+    try {
+        const cart = await Cart.findById(req.params.cid);
+        if (!cart) {
+            return res.status(404).json({ message: 'Cart not found' });
+        }
+        const product = await Product.findById(req.params.pid);
+        if (!product) {
+            return res.status(404).json({ message: 'Product not found' });
+        }
+        const quantity = req.body.quantity || 1;
+        cart.products.push({ product: product._id, quantity });
+        const savedCart = await cart.save();
+        res.status(201).json(savedCart);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Error adding product to cart' });
+    }
 });
 
 
-/////-------- Agregar Producto al Cart mediante Id del producto ---///////////////
-router.post("/:cid/product/:pid", (req, res) => {
-    const cartId = Number(req.params.cid);
-    const productId = Number(req.params.pid);
-    const quantity = req.body.quantity || 1; // Default quantity is 1
-    const carts = leerArchivoJSON(rutaArchivo);
-    const cart = carts.find((cart) => cart.id === cartId);
-    if (!cart) {
-        return res.status(404).json({ message: "Cart not found" });
-}
-    const existingProduct = cart.products.find((product) => product.product === productId);
-    if (existingProduct) {
-    existingProduct.quantity += quantity;
-} else {
-    cart.products.push({ product: productId, quantity });
-}
-    saveCartToFile(carts);
-    res.status(201).json(cart);
+// Eliminar producto del carrito
+router.delete('/:cid/products/:pid', async (req, res) => {
+    try {
+        const cart = await Cart.findById(req.params.cid);
+        if (!cart) {
+            return res.status(404).json({ message: 'Cart not found' });
+        }
+
+        cart.products = cart.products.filter(product => product.product.toString() !== req.params.pid);
+        await cart.save();
+
+        res.json(cart);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Error deleting product from cart' });
+    }
 });
 
-//// ----------- Generar Id ------------- ////
-function generateNewCartId() {
-    const carts = leerArchivoJSON(rutaArchivo);
-    const existingIds = carts.map((cart) => cart.id);
-    const newId = Math.max(...existingIds, 0) + 1;
-    return newId;
-}
+//Actualizar carrito con un arreglo de productos
+router.put('/:cid', async (req, res) => {
+    try {
+        const cart = await Cart.findById(req.params.cid);
+        if (!cart) {
+            return res.status(404).json({ message: 'Cart not found' });
+        }
+
+        cart.products = req.body.products;
+        await cart.save();
+
+        res.json(cart);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Error updating cart' });
+    }
+});
+
+//Actualizar cantidad de ejemplares de un producto en el carrito
+router.put('/:cid/products/:pid', async (req, res) => {
+    try {
+        const cart = await Cart.findById(req.params.cid);
+        if (!cart) {
+            return res.status(404).json({ message: 'Cart not found' });
+        }
+
+        const productToUpdate = cart.products.find(product => product.product.toString() === req.params.pid);
+        if (!productToUpdate) {
+            return res.status(404).json({ message: 'Product not found in cart' });
+        }
+
+        productToUpdate.quantity = req.body.quantity || 1;
+        await cart.save();
+
+        res.json(cart);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Error updating product quantity in cart' });
+    }
+});
+
+//Eliminar todos los productos del carrito
+router.delete('/:cid', async (req, res) => {
+    try {
+        const cart = await Cart.findById(req.params.cid);
+        if (!cart) {
+            return res.status(404).json({ message: 'Cart not found' });
+        }
+
+        cart.products = [];
+        await cart.save();
+
+        res.json(cart);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Error deleting all products from cart' });
+    }
+});
 
 export default router;

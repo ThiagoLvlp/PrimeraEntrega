@@ -1,48 +1,48 @@
 import express from 'express';
-const router = express.Router();
-import path from 'path';
-import fs from 'fs';
 import __dirname from '../utils.js'
+import mongoose from 'mongoose';
 
+const router = express.Router();
 
-const rutaArchivo = path.join(__dirname, '..', 'files', 'Products.json');
-const leerArchivoJSON = (ruta) => {
+const productSchema = new mongoose.Schema({
+    title: String,
+    description: String,
+    price: Number,
+    category: String,
+    availability: Boolean
+});
+
+const Product = mongoose.model('Product', productSchema);
+
+router.get('/api/products', async (req, res) => {
     try {
-    const data = fs.readFileSync(ruta, 'utf8');
-    return JSON.parse(data);
-} catch (error) {
-    console.error('Error al leer el archivo JSON:', error);
-    return [];
-}
-};
+        const page = parseInt(req.query.page) || 1;
+        const limit = 10; // Puedes ajustar el número de productos por página
+        const skip = (page - 1) * limit;
+        
+        const products = await Product.find()
+            .skip(skip)
+            .limit(limit)
+            .exec();
 
-const guardarArchivoJSON = (ruta, data) => {
-    try {
-fs.writeFileSync(ruta, JSON.stringify(data, null, 2), 'utf8');
-console.log('Archivo JSON actualizado correctamente.');
-} catch (error) {
-    console.error('Error al guardar el archivo JSON:', error);
+        res.status(200).json(products);
+    } catch (error) {
+        console.error(error);
+        res.status(500).send('Error loading products');
     }
-};
-
-const Products = leerArchivoJSON(rutaArchivo);
-router.get('/', (req, res) => {
-    res.render('home', { Productos: Products });
 });
 
-router.get('/realtimeproducts', (req, res) => {
-    res.render('realTimeProducts', { productos: Products });
+router.get('/carts/:cid', async (req, res) => {
+    try {
+        const cartId = req.params.cid;
+        const cartProducts = await getCartProductsFromAPI(cartId);
+        res.render('cart', { cartId, products: cartProducts });
+    } catch (error) {
+        console.error(error);
+        res.status(500).send('Error loading cart');
+    }
 });
 
-router.post('/addproduct', (req, res) => {
-const newProduct = req.body;
-
-const newProductId = Products.length + 1;
-newProduct.id = newProductId;
-Products.push(newProduct);
-guardarArchivoJSON(rutaArchivo, Products);
-res.redirect('/realtimeproducts');
-});
 
 
 export default router;

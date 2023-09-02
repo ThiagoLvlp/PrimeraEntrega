@@ -4,44 +4,35 @@ import handlebars from 'express-handlebars'
 import __dirname from './utils.js'
 import cartsRoutes from './routes/carts.router.js'
 import viewRouter from './routes/view.router.js'
-import { Server } from 'socket.io';
+import mongoose from 'mongoose';
 
 const app = express();
-const PORT = 8080;
 
 app.use(express.urlencoded({extended : true}));
 app.use(express.json());
+
 app.use(express.static(__dirname + '/public'));
 app.engine('handlebars', handlebars.engine());
 app.set('views', __dirname + '/views/');
 app.set('view engine', 'handlebars');
 
+app.use('/', viewRouter)
 app.use('/api/products', productsRoutes);
 app.use('/api/carts', cartsRoutes);
 
-const httpServer = app.listen(PORT, () => {
-    console.log(`Server run on port: ${PORT}`);
-})
-
-app.use('/', viewRouter);
-
-const socketServer = new Server(httpServer);
-
-socketServer.on('connection', socket => {
-    console.log("Nuevo usuario conectado");
-
-app.get('/realtimeproducts', (req, res) => {
-    res.render('realTimeProducts', { productos: Products });
+const SERVER_PORT = 8080;
+app.listen(8080, () => {
+    console.log("Servidor escuchando por el puerto: " + SERVER_PORT);
 });
 
-app.post('/addproduct', (req, res) => {
-const newProduct = req.body;
-io.emit('productos', Products);
-res.redirect('/realtimeproducts');
-});
+const connectMongoDB = async ()=>{
+    try {
+        await mongoose.connect('mongodb+srv://thiagolopezvega:080897t@cluster0.xxpl1e8.mongodb.net/?retryWrites=true&w=majority');
+        console.log("Conectado con exito a MongoDB usando Moongose.")
 
-io.on('connection', (socket) => {
-console.log('Usuario conectado');
-
-socket.emit('productos', Products);
-})});
+    } catch (error) {
+        console.error("No se pudo conectar a la BD usando Moongose: " + error);
+        process.exit();
+    }
+};
+connectMongoDB();

@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Cart</title>
+</head>
+<body>
+    <h1>Cart Details</h1>
+    <h2>Cart ID: {{cartId}}</h2>
+    <ul>
+        {{#each products}}
+            <li>{{title}} - Price: ${{price}}</li>
+        {{/each}}
+    </ul>
+
+    <a href="/">Back to Products</a>
+</body>
+</html>

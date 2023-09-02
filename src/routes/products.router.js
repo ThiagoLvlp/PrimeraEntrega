@@ -1,121 +1,114 @@
-import { Router } from "express";
-const rutaArchivo = "../files/Products.json";
-import fs from "fs";
-const router = Router();
+import express from 'express';
+import Product from '../models/productsmodel.js'; 
 
-//Leer Archivo JSON de los productos //////
-const leerArchivoJSON = (ruta) => {
+const router = express.Router();
+
+router.get("/", async (req, res) => {
     try {
-        const data = fs.readFileSync(ruta, "utf8");
-        return JSON.parse(data);
+        const limit = parseInt(req.query.limit) || 10;
+        const page = parseInt(req.query.page) || 1;
+        const sort = req.query.sort === 'desc' ? -1 : 1;
+        const query = req.query.query || '';
+        const category = req.query.category || '';
+        const availability = req.query.availability || '';
+        const skip = (page - 1) * limit;
+        const regexQuery = new RegExp(query, 'i');
+        const regexCategory = new RegExp(category, 'i');
+        const regexAvailability = new RegExp(availability, 'i');
+        const sortOptions = {};
+        if (sort === 1 || sort === -1) {
+            sortOptions.price = sort;
+        }
+        const filter = {
+            $or: [{ title: regexQuery }, { description: regexQuery }],
+            category: regexCategory,
+            availability: regexAvailability
+        };
+        const totalCount = await Product.countDocuments(filter);
+        const totalPages = Math.ceil(totalCount / limit);
+        const hasPrevPage = page > 1;
+        const hasNextPage = page < totalPages;
+        const prevPage = hasPrevPage ? page - 1 : null;
+        const nextPage = hasNextPage ? page + 1 : null;
+        const products = await Product.find(filter)
+            .sort(sortOptions)
+            .skip(skip)
+            .limit(limit);
+
+        const response = {
+            status: 'success',
+            payload: products,
+            totalPages,
+            prevPage,
+            nextPage,
+            page,
+            hasPrevPage,
+            hasNextPage,
+            prevLink: hasPrevPage ? `/api/products?page=${prevPage}` : null,
+            nextLink: hasNextPage ? `/api/products?page=${nextPage}` : null
+        };
+
+        res.json(response);
     } catch (error) {
-        console.error("Error al leer el archivo JSON:", error);
-        return [];
-    }
-};
-const Products = leerArchivoJSON(rutaArchivo);
-/////--------------------- * --------------------////////
-
-/////--------------------- Get Products --------------------////////
-
-router.get("/", (req, res) => {
-    const limit = req.query.limit ? parseInt(req.query.limit) : undefined;
-    if (limit && !isNaN(limit)) {
-    const limitedProducts = Products.slice(0, limit);
-    res.send(limitedProducts);
-} else {
-    res.send(Products);
+        console.error(error);
+        res.status(500).json({ status: 'error', message: 'Error retrieving products' });
     }
 });
 
-/////--------------------- GetProductById --------------------////////
-router.get('/:idProducts', (req, res) => {
-    const idProducts = Number(req.params.idProducts);
-    const product = Products.find((product) => product.id === idProducts);
-    if (!product) {
-        return res.status(404).json({ message: 'Product not found' });
+//Crear un nuevo producto
+router.post("/", async (req, res) => {
+    try {
+        const {
+            title,
+            description,
+            code,
+            price,
+            stock,
+            category,
+            thumbnails,
+            status = true,
+        } = req.body;
+
+        const newProduct = new Product({
+            title,
+            description,
+            code,
+            price,
+            stock,
+            category,
+            thumbnails,
+            status,
+        });
+
+        const savedProduct = await newProduct.save();
+        res.status(201).json(savedProduct);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Error creating product' });
     }
-
-    res.send(product);
 });
 
-/////--------------------- Create Product--------------------////////
-router.post("/", (req, res) => {
-    const {
-    title,
-    description,
-    code,
-    price,
-    stock,
-    category,
-    thumbnails,
-    status = true,
-} = req.body;
-    const existingIds = Products.map((product) => product.id);
-    const newId = Math.max(...existingIds, 0) + 1;
-    const newProduct = {
-        id: newId,
-        title,
-        description,
-        code,
-        price,
-        status,
-        stock,
-        category,
-        thumbnails,
-    };
-    Products.push(newProduct);
-    fs.writeFileSync(rutaArchivo, JSON.stringify(Products, null, 2), "utf8");
-    res.status(201).json(newProduct);
-});
 
-/////--------------------- Update Product --------------------////////
-router.put('/:idProducts', (req, res) => {
-    const idProducts = Number(req.params.idProducts);
-    const productIndex = Products.findIndex((product) => product.id === idProducts);
-    if (productIndex === -1) {
-        return res.status(404).json({ message: 'Product not found' });
+// PUT: Actualizar un producto existente
+router.put('/:id', async (req, res) => {
+    try {
+        const updatedProduct = await Product.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        res.json(updatedProduct);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Error updating product' });
     }
-    const existingProduct = Products[productIndex];
-    const {
-        title,
-        description,
-        code,
-        price,
-        stock,
-        category,
-        thumbnails,
-        status,
-    } = req.body;
-
-    existingProduct.title = title || existingProduct.title;
-    existingProduct.description = description || existingProduct.description;
-    existingProduct.code = code || existingProduct.code;
-    existingProduct.price = price || existingProduct.price;
-    existingProduct.stock = stock || existingProduct.stock;
-    existingProduct.category = category || existingProduct.category;
-    existingProduct.thumbnails = thumbnails || existingProduct.thumbnails;
-    existingProduct.status = status !== undefined ? status : existingProduct.status;
-    
-    Products[productIndex] = existingProduct;
-    fs.writeFileSync(rutaArchivo, JSON.stringify(Products, null, 2), 'utf8');
-    res.json(existingProduct);
 });
 
-/////--------------------- Delate Product--------------------////////
-router.delete('/:idProducts', (req, res) => {
-    const idProducts = Number(req.params.idProducts);
-    const productIndex = Products.findIndex((product) => product.id === idProducts);
-    if (productIndex === -1) {
-        return res.status(404).json({ message: 'Product not found' });
+// DELETE: Eliminar un producto
+router.delete('/:id', async (req, res) => {
+    try {
+        const deletedProduct = await Product.findByIdAndDelete(req.params.id);
+        res.json({ message: 'Product deleted successfully', deletedProduct });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Error deleting product' });
     }
-    const deletedProduct = Products.splice(productIndex, 1);
-    fs.writeFileSync(rutaArchivo, JSON.stringify(Products, null, 2), 'utf8');
-    res.json({ message: 'Product deleted successfully', deletedProduct });
 });
-
-
-
-
 
 export default router;
