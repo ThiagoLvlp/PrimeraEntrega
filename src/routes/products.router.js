@@ -1,5 +1,6 @@
 import express from 'express';
-import Product from '../models/productsmodel.js'; 
+import Product from '../models/productsmodel.js';
+import mongoose from 'mongoose';
 
 const router = express.Router();
 
@@ -55,6 +56,18 @@ router.get("/", async (req, res) => {
     }
 });
 
+
+router.get('/products', async (req, res) => {
+    try {
+        const products = await Product.find(); 
+        res.render('products', { products }); 
+    } catch (error) {
+        console.error('Error al recuperar los productos:', error);
+        res.status(500).send('Error interno del servidor');
+    }
+});
+
+
 //Crear un nuevo producto
 router.post("/", async (req, res) => {
     try {
@@ -108,6 +121,24 @@ router.delete('/:id', async (req, res) => {
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Error deleting product' });
+    }
+});
+
+// GET: Buscar un producto por ID
+router.get("/:id", async (req, res) => {
+    try {
+        const productId = req.params.id;
+        if (!mongoose.Types.ObjectId.isValid(productId)) {
+            return res.status(400).json({ message: 'Invalid product ID' });
+        }
+        const product = await Product.findById(productId);
+        if (!product) {
+            return res.status(404).json({ message: 'Product not found' });
+        }
+        res.json(product);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Error retrieving product by ID' });
     }
 });
 

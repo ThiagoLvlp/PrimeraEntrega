@@ -1,6 +1,8 @@
 import express from 'express';
 import __dirname from '../utils.js'
 import mongoose from 'mongoose';
+import cookieParser from 'cookie-parser';
+import productsSchema from '../models/productsmodel.js';
 
 const router = express.Router();
 
@@ -17,7 +19,7 @@ const Product = mongoose.model('Product', productSchema);
 router.get('/api/products', async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
-        const limit = 10; // Puedes ajustar el número de productos por página
+        const limit = 21; // Ajustar el número de productos por página
         const skip = (page - 1) * limit;
         
         const products = await Product.find()
@@ -43,6 +45,23 @@ router.get('/carts/:cid', async (req, res) => {
     }
 });
 
+router.use(cookieParser("CoderS3cr3tC0d3"));
 
+router.get('/',(req,res)=>{
+    res.render('login',{})
+});
+
+router.get("/products", async (req, res) => {
+    try {
+        const products = await productsSchema.find();
+        res.render('products', {
+            user: req.session.user,
+            products: products
+        });
+    } catch (error) {
+        console.error("Error al obtener productos: " + error);
+        res.status(500).send("Error al obtener productos");
+    }
+});
 
 export default router;
